@@ -1,11 +1,12 @@
 #!/usr/bin/python
 import string
+import os
 class Gameboard():
     def __init__(self):
         self.letters = string.ascii_uppercase
-        self.columns = 5
-        self.rows = 5
-        self.row = list('O' * self.columns)
+        self.columns = 10
+        self.rows = 10
+        self.row = list(' |' * self.columns)
         self.board = []
         for times in range(self.rows):
             self.board.append(self.row[:])
@@ -28,16 +29,14 @@ class Gameboard():
         if direction == '':
             return None
         if direction in [ 'V', 'v', 'Vertical', 'vertical']:
-            if coordinates[0] + ship_length-1 < self.columns:
+            if coordinates[0] + ship_length-1 < self.rows:
                 return True
             else:
-                print(f'X-Coordinate {coordinates[0]+ship_length} is off the board.')
                 return False 
         if direction in ['h', 'H', 'horizontal', 'Horizontal']:
-            if coordinates[1] + ship_length-1 < self.rows:
+            if coordinates[1] + (ship_length-1)*2 <= (self.columns-1)*2:
                 return True
             else:
-                print(f'Y-Coordinate {coordinates[0]+ship_length} is off the board.')
                 return False 
         else:
             print('Invalid Direction.')
@@ -47,92 +46,166 @@ class Gameboard():
         self.coordinates = []
         for coordinate in location:
             if coordinate in self.letters:
-                self.coordinates.append(self.letters.index(coordinate))
+                self.coordinates.append(self.letters.index(coordinate)*2)
             if coordinate.isdigit() and int(coordinate) in list(range(self.rows+1)):
                 self.coordinates.insert(0,int(coordinate)-1)
         return self.coordinates
     
     def get_board(self):
         index = 1
-        print(f'{self.letters[0:self.columns].rjust(self.columns+4)}')
+        print(f'{("|".join(list(self.letters[0:self.columns]))+"|").rjust(self.columns+25)}')
         for x in self.board:
             row = f'{str(index)} '
+            self.get_ships()
             for y in x:
                 row = row + y
-            print(row.rjust(self.columns+4))
+            print(row.rjust(self.columns+25))
             index += 1
+    
+    def get_ships(self):
+        for coor in navy.ship_coordinates():
+            self.board[coor[0]][coor[1]] = navy.get_ship_at_coordinate(coor).get_status()[f'{coor}']
     
     def place_ship(self, ship):
         length = ship.get_length()
-        location = '' #input(f'Where would you like to place the end of the {ship.get_ship()}? ').upper()
+        location = ''
         direction = '' 
         coordinates = [0,0]
-        while not self.is_valid_location(location):
-            location = input(f'Where would you like to place the end of the {ship.get_ship()}? ').upper()
-        
+        space_clear = []
+        while (False in space_clear) or (not self.is_valid_location(location) ) or (not self.is_valid_direction(coordinates, direction, ship.get_length())): 
+            space_clear = []
+            while len(location) < 2:
+                location = input(f'Where would you like to place the end of the {ship.get_ship().ship_name}? ').upper()
+            coordinates = self.get_coordinates(location)
+            while direction not in ['H', 'V']:
+                direction = input(f'Place the {ship.get_ship().ship_name} (H)orizontal or (V)ertical? ').upper() 
+            clear_screen()
             if not self.is_valid_direction(coordinates, direction, ship.get_length()):
-                 direction = input(f'Place the {ship.get_ship()} (H)orizontal or (V)ertical? ') 
-        coordinates = self.get_coordinates(location)
-        for pos in range(length):
-            if direction == 'V':
-                ship.add_coordinate([coordinates[0]+pos,coordinates[1]])
-                self.place_x([coordinates[0]+pos,coordinates[1]])
-            if direction == 'H':
-                self.place_x([coordinates[0],coordinates[1]+pos])
-                ship.add_coordinate([coordinates[0],coordinates[1]+pos])
-        self.get_board()
+                clear_screen()
+                print('Ship placed off board.')
+                self.get_board()
+            if (self.is_valid_location(location) ) and (self.is_valid_direction(coordinates, direction, ship.get_length())): 
+                ship_coordinates = []
+                for pos in range(length):
+                    if direction in [ 'V', 'v', 'Vertical', 'vertical']:
+                        ship_coordinates.append([coordinates[0]+pos,coordinates[1]])
+                    if direction in ['h', 'H', 'horizontal', 'Horizontal']:
+                        ship_coordinates.append([coordinates[0],coordinates[1]+(pos*2)])
+                for coor in ship_coordinates:
+                    if coor in navy.ship_coordinates():
+                        print(f'That space is occupied by the {navy.get_ship_at_coordinate(coor).ship_name}.')
+                        self.get_board()
+                        space_clear.append(False)
+            else:
+                continue
+                        
+                
+        ship.add_coordinate(ship_coordinates)
+        self.get_board() 
 
     def place_x(self,coordinates):
-        print(coordinates)
-        self.board[coordinates[0]][coordinates[1]] = 'X'
+        for coor in coordinates:
+            self.board[coor[0]][coor[1]*2] = 'O'
 
 class Ship():
-    def __init__(self, length):
-        self.length = length
-        self.status = []
+    def __init__(self, name):
+        self.status = {}
+        self.ship_name = name
         self.coordinates = []
-        for x in range(length):
-            self.status.append('S')
-        if self.length == 2:
-            self.ship_name = "Destroyer"
-        elif self.length == 3:
-            self.ship_name = 'Cruiser'
-        elif self.length == 4:
-            self.ship_name = 'Battleship'
-        elif self.length == 5:
-            self.ship_name = 'Aircraft Carrier'
+        self.length = 0
+        if self.ship_name == "Destroyer":
+            self.length = 2
+        elif self.ship_name == 'Cruiser':
+            self.length = 3
+        elif self.ship_name == 'Submarine':
+            self.length = 3
+        elif self.ship_name == 'Battleship':
+            self.length = 4
+        elif self.ship_name == 'Aircraft Carrier':
+            self.length = 5
+        self.health = self.length 
+
     def get_ship(self):
-        return self.ship_name
+        return self
     def get_length(self):
         return self.length
-    def set_damage(self, position):
-        self.status[position] = 'X'
-    def add_coordinate(self, coordinate):
-        self.coordinates.append(coordinate)
+    def set_damage(self, coordinates):
+        if self.status[f'{coordinates}'] == 'X':
+            print('Already Hit.')
+        else:
+            self.status[f'{coordinates}'] = 'X'
+            self.health -= 1
+            self.get_damage()
+    def add_coordinate(self, coordinates):
+        for coor in coordinates:
+            self.coordinates.append(coor)
+            self.status[f'{coor}'] = 'O'
+    def get_coordinates(self):
+        return self.coordinates
+    def get_status(self):
+        return self.status
+    def has_sunk(self):
+        if self.health == 0:
+            return True
     def get_damage(self):
-        damaged = self.status.count('X')
-        print(f'{self.get_ship()}\n{self.status}\nDamage: {damaged}/{self.length}')
-        print(f'Coordinates: {self.coordinates}\n')
-        if damaged == self.length:
-            print(f'{self.get_ship()} has sunk.')
-
+        if self.health == 0:
+            print(f'{self.get_ship().ship_name} has sunk.')
+        else:
+            return self.health
 
 class Navy():
     def __init__(self):
         self.ships = []
-        self.ships.append(Ship(2))
-        self.ships.append(Ship(3))
-        self.ships.append(Ship(4))
+        self.ships.append(Ship('Destroyer'))
+        self.ships.append(Ship('Cruiser'))
+        self.ships.append(Ship('Submarine'))
+        self.ships.append(Ship('Battleship'))
+        self.ships.append(Ship('Aircraft Carrier'))
     def describe_navy(self):
         for ship in self.ships:
-            ship.get_damage()
+            if ship.has_sunk():
+                print(f'{ship.ship_name} has sunk.')
+                print()
+            else:
+                print(ship.ship_name)
+                print('Coordinates: '+ str(ship.get_coordinates()))
+                print('Health: '+ str(ship.get_damage()) + '/' + str(ship.get_length()))
+                print(list(ship.get_status().values()))
+                print()
+    def get_ship_at_coordinate(self, coordinates):
+        for ship in self.ships:
+            if coordinates in ship.get_coordinates():
+                return ship.get_ship()
+    def ship_coordinates(self):
+        all_ship_coordinates = []
+        for ship in self.ships:
+            for coor in ship.get_coordinates():
+                all_ship_coordinates.append(coor)
+        return all_ship_coordinates
 
+def clear_screen():
+    os.system('clear')
+
+clear_screen()
 board = Gameboard()
 navy = Navy()
 board.get_board()
 for ship in navy.ships:
     board.place_ship(ship)
-navy.ships[1].set_damage(1)
-
-navy.ships[1].set_damage(2)
-navy.describe_navy()
+while True:
+    loc = input('Fire at which location? (Press \'s\' for Status) ').upper()
+    if loc == 'Q':
+        break
+    if loc == 'S':
+        clear_screen()
+        navy.describe_navy()
+        board.get_board()
+        continue
+    coordinates = board.get_coordinates(loc)
+    clear_screen()
+    if navy.get_ship_at_coordinate(coordinates):
+        print('Hit!')
+        navy.get_ship_at_coordinate(coordinates).set_damage(coordinates)
+    else:
+        print('Miss.')
+    board.get_board()
