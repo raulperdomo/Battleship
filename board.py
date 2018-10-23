@@ -17,12 +17,16 @@ class Gameboard():
     def is_valid_location(self, location):
         if location in self.possible_spaces:
             return True
+        elif location == '':
+            return None
         else:
             print(f'{location} is not a valid location.')
             return False
 
 
     def is_valid_direction(self, coordinates, direction, ship_length):
+        if direction == '':
+            return None
         if direction in [ 'V', 'v', 'Vertical', 'vertical']:
             if coordinates[0] + ship_length-1 < self.columns:
                 return True
@@ -60,19 +64,15 @@ class Gameboard():
     
     def place_ship(self, ship):
         length = ship.get_length()
-        location = input(f'Where would you like to place the end of the {ship.get_ship()}? ').upper()
-        
+        location = '' #input(f'Where would you like to place the end of the {ship.get_ship()}? ').upper()
+        direction = '' 
+        coordinates = [0,0]
         while not self.is_valid_location(location):
             location = input(f'Where would you like to place the end of the {ship.get_ship()}? ').upper()
         
-            while not self.is_valid_direction(coordinates, direction, ship.get_length()):
+            if not self.is_valid_direction(coordinates, direction, ship.get_length()):
                  direction = input(f'Place the {ship.get_ship()} (H)orizontal or (V)ertical? ') 
         coordinates = self.get_coordinates(location)
-        direction = input(f'Place the {ship.get_ship()} (H)orizontal or (V)ertical? ') 
-        
-        
-        print(coordinates)
-        print('Placement is good.')
         for pos in range(length):
             if direction == 'V':
                 ship.add_coordinate([coordinates[0]+pos,coordinates[1]])
