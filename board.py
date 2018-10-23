@@ -75,9 +75,11 @@ class Gameboard():
         print('Placement is good.')
         for pos in range(length):
             if direction == 'V':
+                ship.add_coordinate([coordinates[0]+pos,coordinates[1]])
                 self.place_x([coordinates[0]+pos,coordinates[1]])
             if direction == 'H':
                 self.place_x([coordinates[0],coordinates[1]+pos])
+                ship.add_coordinate([coordinates[0],coordinates[1]+pos])
         self.get_board()
 
     def place_x(self,coordinates):
@@ -88,6 +90,7 @@ class Ship():
     def __init__(self, length):
         self.length = length
         self.status = []
+        self.coordinates = []
         for x in range(length):
             self.status.append('S')
         if self.length == 2:
@@ -104,9 +107,12 @@ class Ship():
         return self.length
     def set_damage(self, position):
         self.status[position] = 'X'
+    def add_coordinate(self, coordinate):
+        self.coordinates.append(coordinate)
     def get_damage(self):
         damaged = self.status.count('X')
-        print(f'{self.get_ship()} {self.status}\nDamage: {damaged}/{self.length}')
+        print(f'{self.get_ship()}\n{self.status}\nDamage: {damaged}/{self.length}')
+        print(f'Coordinates: {self.coordinates}\n')
         if damaged == self.length:
             print(f'{self.get_ship()} has sunk.')
 
@@ -123,19 +129,10 @@ class Navy():
 
 board = Gameboard()
 navy = Navy()
-navy.describe_navy()
+board.get_board()
 for ship in navy.ships:
     board.place_ship(ship)
 navy.ships[1].set_damage(1)
 
 navy.ships[1].set_damage(2)
 navy.describe_navy()
-
-while 1:
-    loc = input('Input a spot on the board. ').upper()
-    while not board.is_valid_location(loc):
-        print('Location does not exist.')
-        loc = input('Input a spot on the board. ').upper()
-    board.place_x(board.get_coordinates(loc))
-    board.get_board()
-#board.place_ship(ships[0])
